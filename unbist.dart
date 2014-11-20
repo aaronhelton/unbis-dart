@@ -3,9 +3,9 @@ import 'package:xml/xml.dart';
 
 final uri_scheme = "http";
 final base_uri = "unbis-thesaurus.s3-website-us-east-1.amazonaws.com";
-final uri_data_path = "/xml/";
+final uri_data_path = "xml";
 final default_locale = "en";
-final description_doc = "http://unbis-thesaurus.s3-website-us-east-1.amazonaws.com/xml/01.xml";
+final description_doc = "01";
 
 var specificLabel = '';
 
@@ -20,7 +20,9 @@ void main() {
   var termContainer = querySelector('#termContainer');
   var requestedUri = Uri.parse(window.location.toString());
   var locale = default_locale;
-  var termDoc = description_doc;
+  var termDoc = new Uri(scheme: uri_scheme, 
+       host: base_uri, 
+       path: '/${uri_data_path}/${description_doc}.${uri_data_path}');
   
   if(requestedUri.query.length > 0) {
     if(requestedUri.queryParameters['locale'] != null) {
@@ -30,10 +32,13 @@ void main() {
       }
     }
     if(requestedUri.queryParameters['t'] != null) {
-      // this needs validation...
-      termDoc = requestedUri.queryParameters['t'];
+      var termId = requestedUri.queryParameters['t'];
+      termDoc = new Uri(scheme: uri_scheme, 
+          host: base_uri, 
+          path: '/${uri_data_path}/${termId}.${uri_data_path}');
     }
   } 
+  print(termDoc);
   getTerm(termDoc,locale);
 }
 
@@ -91,7 +96,7 @@ void buildTermPage(data,locale) {
   if(members != null) {
     termContainer.appendHtml('<ul id="member">');
     for(var member in members) {
-      var termUri = member.attributes.first.toString().split('=')[1].replaceAll(new RegExp(r'"'), '');
+      var termUri = member.attributes.first.toString().split('?')[1].replaceAll(new RegExp(r'"'), '').replaceAll(new RegExp(r't='), '');
       getTermLabel(termUri,locale,'member');
     }
     termContainer.appendHtml('</ul>');
@@ -100,7 +105,7 @@ void buildTermPage(data,locale) {
   if(topConcepts != null) {
     termContainer.appendHtml('<ul id="hasTopConcept">');
     for(var topConcept in topConcepts) {
-      var termUri = topConcept.attributes.first.toString().split('=')[1].replaceAll(new RegExp(r'"'), '');
+      var termUri = topConcept.attributes.first.toString().split('?')[1].replaceAll(new RegExp(r'"'), '').replaceAll(new RegExp(r't='), '');
       getTermLabel(termUri,locale,'hasTopConcept');
     }
     termContainer.appendHtml('</ul>');
@@ -109,7 +114,8 @@ void buildTermPage(data,locale) {
   if(broader != null) {
     termContainer.appendHtml('<ul id="broader">');
     for(var b in broader) {
-      var termUri = b.attributes.first.toString().split('=')[1].replaceAll(new RegExp(r'"'), '');
+      //print(b.attributes.first.toString().split('?')[1].replaceAll(new RegExp(r'"'), ''));
+      var termUri = b.attributes.first.toString().split('?')[1].replaceAll(new RegExp(r'"'), '').replaceAll(new RegExp(r't='), '');
       getTermLabel(termUri,locale,'broader');
     }
     termContainer.appendHtml('</ul>');
@@ -118,7 +124,7 @@ void buildTermPage(data,locale) {
   if(related != null) {
     termContainer.appendHtml('<ul id="related">');
     for(var r in related) {
-      var termUri = r.attributes.first.toString().split('=')[1].replaceAll(new RegExp(r'"'), '');
+      var termUri = r.attributes.first.toString().split('?')[1].replaceAll(new RegExp(r'"'), '').replaceAll(new RegExp(r't='), '');
       getTermLabel(termUri,locale,'related');
     }
     termContainer.appendHtml('</ul>');
@@ -127,7 +133,7 @@ void buildTermPage(data,locale) {
   if(narrower != null) {
     termContainer.appendHtml('<ul id="narrower">');
     for(var n in narrower) {
-      var termUri = n.attributes.first.toString().split('=')[1].replaceAll(new RegExp(r'"'), '');
+      var termUri = n.attributes.first.toString().split('?')[1].replaceAll(new RegExp(r'"'), '').replaceAll(new RegExp(r't='), '');
       getTermLabel(termUri,locale,'narrower');
     }
     termContainer.appendHtml('</ul>');
@@ -143,9 +149,10 @@ void buildTermPage(data,locale) {
 }
 
 void getTermLabel(uri,locale,context) {
-  var termUri = Uri.parse(uri);
-  var actualUri = termUri.replace(path: '/xml' + termUri.path + '.xml');
+  //var termUri = Uri.parse(uri);
+  //var actualUri = termUri.replace(path: '/xml/' + termUri.path + '.xml');
   //print('Getting ${locale} label from ${actualUri}');
+  var actualUri = 'http://${base_uri}/xml/${uri}.xml';
   var request = new HttpRequest();
   request.open('GET', actualUri.toString());
   request.onLoad.listen((event) {
@@ -156,7 +163,7 @@ void getTermLabel(uri,locale,context) {
         if(prefLabels != null) {
           for (var label in prefLabels) {
             if(label.attributes.first.toString() == 'xml:lang="${locale}"') {
-              var targetUri = '?t=${actualUri}&locale=${locale}';
+              var targetUri = '?t=${uri}&locale=${locale}';
               querySelector('#${context}').appendHtml('<li>skos:${context} <a href=${targetUri}>' + label.text + '</a></li>');
             }
           }
